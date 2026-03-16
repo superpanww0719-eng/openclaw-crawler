@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs
 
 try:
-    from scrapling.fetchers import AsyncStealthyFetcher, AsyncStealthySession
+    from scrapling.fetchers import StealthyFetcher, StealthySession
     from scrapling.parser import Selector
 except ImportError:
     raise ImportError("请先安装 scrapling: pip install 'scrapling[all]>=0.4.2'")
@@ -27,10 +27,10 @@ class WechatCrawler:
     def __init__(self):
         self.session = None
     
-    async def _init_session(self):
+    def _init_session(self):
         """初始化 Stealthy 会话"""
         if self.session is None:
-            self.session = AsyncStealthySession(
+            self.session = StealthySession(
                 headless=True,
                 solve_cloudflare=True,
                 block_webrtc=True,
@@ -47,15 +47,15 @@ class WechatCrawler:
         Returns:
             Dict: 包含 title, author, content, publish_time 等字段
         """
-        return asyncio.run(self._crawl_async(url))
+        return self._crawl_sync(url)
     
-    async def _crawl_async(self, url: str) -> Dict[str, Any]:
-        """异步爬取实现"""
-        await self._init_session()
+    def _crawl_sync(self, url: str) -> Dict[str, Any]:
+        """同步爬取实现"""
+        self._init_session()
         
         try:
             # 使用 stealthy-fetch 绕过反爬虫
-            page = await self.session.fetch(
+            page = self.session.fetch(
                 url,
                 network_idle=True,
                 wait=3000,  # 等待页面加载完成
@@ -181,4 +181,7 @@ class WechatCrawler:
     def __del__(self):
         """清理资源"""
         if self.session:
-            asyncio.run(self.session.close())
+            try:
+                self.session.close()
+            except:
+                pass
